@@ -177,7 +177,7 @@ def register_ranged_hparams(name=None):
     if rhp_name in _RANGED_HPARAMS:
       raise LookupError("RangedHParams set %s already registered." % rhp_name)
     # Check that the fn takes a single argument
-    args, varargs, keywords, _ = inspect.getargspec(rhp_fn)
+    args, varargs, keywords = inspect.getfullargspec(rhp_fn)[0:3]
     if len(args) != 1 or varargs is not None or keywords is not None:
       raise ValueError("RangedHParams set function must take a single "
                        "argument, the RangedHParams object.")
