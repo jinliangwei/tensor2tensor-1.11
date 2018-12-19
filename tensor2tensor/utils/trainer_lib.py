@@ -216,6 +216,7 @@ def create_run_config(model_name,
                       tpu_config_extra_kwargs=None,
                       cloud_tpu_name=""):
   """Create RunConfig, TPUConfig, and Parallelism object."""
+  tf.logging.info("create_run_config, xla_jit_level = %d" % xla_jit_level)
   session_config = create_session_config(
       log_device_placement=log_device_placement,
       enable_graph_rewriter=enable_graph_rewriter,
@@ -659,6 +660,7 @@ def create_experiment(
     decode_to_file=None,
     decode_reference=None,
     std_server_protocol=None):
+  tf.logging.info("create_experiment, use_xla = %r" % use_xla)
   """Create Experiment."""
   # HParams
   hparams.add_hparam("model_dir", run_config.model_dir)

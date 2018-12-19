@@ -230,6 +230,7 @@ def create_run_config(hp, output_dir=None):
       hp.daisy_chain_variables and
       hp.activation_dtype == "float32" and
       hp.weight_dtype == "float32")
+  tf.logging.info("t2t_trainer::create_run_config, xla_jit_level = %d" % FLAGS.xla_jit_level)
   return trainer_lib.create_run_config(
       model_name=FLAGS.model,
       model_dir=output_dir or os.path.expanduser(FLAGS.output_dir),

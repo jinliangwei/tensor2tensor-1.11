@@ -207,7 +207,7 @@ class MtfTransformer(mtf_model.MtfModel):
       encoder_output = None
       encoder_decoder_attention_mask = None
     else:
-      inputs = tf.squeeze(tf.to_int32(features["inputs"]), [2, 3])
+      inputs = tf.squeeze(tf.to_int32(features["inputs"]), [2, 3], name = "squeeze_input")
       inputs = pad_to_max_length(inputs)
       inputs = self._import_to_batch_by_length(inputs, "inputs", mesh, hparams)
       if "inputs_segmentation" in features:
@@ -744,8 +744,23 @@ def mtf_transformer_base_4():
   return hparams
 
 @registry.register_hparams
+def mtf_transformer_base_1():
+  hparams = mtf_transformer_base()
+  hparams.mesh_shape = "batch:1"
+  return hparams
+
+@registry.register_hparams
 def mtf_transformer_base_lm():
   hparams = mtf_transformer_base()
+  hparams.decoder_layers = hparams.encoder_layers
+  hparams.transformer_type = "decoder"
+  hparams.label_smoothing = 0.0
+  hparams.sampling_method = "random"
+  return hparams
+
+@registry.register_hparams
+def mtf_transformer_base_lm_4():
+  hparams = mtf_transformer_base_4()
   hparams.decoder_layers = hparams.encoder_layers
   hparams.transformer_type = "decoder"
   hparams.label_smoothing = 0.0
@@ -785,6 +800,11 @@ def mtf_transformer_single():
   hparams.mesh_shape = ""
   return hparams
 
+@registry.register_hparams
+def mtf_transformer_tiny_4():
+  hparams = mtf_transformer_tiny()
+  hparams.mesh_shape = "model:4"
+  return hparams
 
 @registry.register_hparams
 def mtf_transformer_enc_single():

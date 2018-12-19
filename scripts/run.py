@@ -54,6 +54,7 @@ def get_default_config():
         'log_dir' : '/tmp',
         'logtofile' : 'true',
         'alsologtostderr' : 'false',
+        'vlog_level' :  '-1',
     }
     config['memory'] = {
         'mem_logger_dir' : None
@@ -80,6 +81,7 @@ def get_default_config():
 def get_env_str(pargs, tf_config_str, num_gpus):
     env_vars = {
         'TF_CONFIG' : tf_config_str,
+        'TF_CPP_MIN_VLOG_LEVEL' :  pargs['log']['vlog_level'],
     }
 
     if pargs['hdfs']['hadoop_classpath_file'] is not None:

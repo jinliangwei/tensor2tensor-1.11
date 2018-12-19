@@ -5,8 +5,8 @@ PROBLEM=translate_ende_wmt32k
 TMP_DIR=/datasets/BigLearning/jinlianw/tmp
 DATA_DIR=/datasets/BigLearning/jinlianw/$PROBLEM
 
-MODEL=transformer
-HPARAMS=transformer_base_single_gpu
+MODEL=mtf_transformer
+HPARAMS=mtf_transformer_base_1
 TRAIN_STEPS=200
 
 TRAIN_DIR=/proj/BigLearning/jinlianw/t2t_train_moe_exp/$PROBLEM/$MODEL-$HPARAMS

@@ -90,6 +90,9 @@ class MtfModel(t2t_model.T2TModel):
     else:
       var_placer = None
       if data_parallelism is None or len(data_parallelism.ps_devices) == 1:
+        tf.logging.info("data_parallelism is None or single ps_devices")
+        tf.logging.info("data_parallelism == None ? " + str(data_parallelism is None))
+        tf.logging.info("data_parallelism.ps_devices = " + str(data_parallelism.ps_devices))
         mesh_devices = [""] * mesh_shape.size
       else:
         tf.logging.info("not use tpu, mesh_shape is " +
