@@ -1,25 +1,20 @@
 #!/bin/bash
-#PROBLEM=languagemodel_lm1b32k
+#PROBLEM=languagemodel_lm1b8k
 #PROBLEM=languagemodel_ptb10k
 PROBLEM=translate_ende_wmt32k
-TMP_DIR=/datasets/BigLearning/jinlianw/tmp
-DATA_DIR=/datasets/BigLearning/jinlianw/$PROBLEM
+TMP_DIR=tmp/test
+DATA_DIR=tmp/test/$PROBLEM
 
 MODEL=mtf_transformer
-HPARAMS=mtf_transformer_base_1
-TRAIN_STEPS=1000
+#HPARAMS=mtf_transformer_single
+HPARAMS=mtf_transformer_base_moe_1
+TRAIN_STEPS=200
 
-TRAIN_DIR=/proj/BigLearning/jinlianw/memory/$PROBLEM/$MODEL-${HPARAMS}
-
-rm -rf $TRAIN_DIR
+TRAIN_DIR=tmp/test/t2t_train_moe_exp/$PROBLEM/$MODEL-$HPARAMS
 
 mkdir -p $TRAIN_DIR
 
-LOG_FILE=t2t_transformer_memory.log
-
-rm -rf $LOG_FILE
-
-DBG_PROFILE=false
+DBG_PROFILE=true
 
 USE_NVPROF=false
 
@@ -38,9 +33,8 @@ then
 	--train_steps=$TRAIN_STEPS \
 	--dbgprofile=$DBG_PROFILE
 else
-    TF_MEM_LOGGER_PATH_PREFIX=/tmp \
-    TF_CPP_MIN_VLOG_LEVEL=-1 \
     ./tensor2tensor/bin/t2t-trainer \
+    --generate_data \
     --data_dir=$DATA_DIR \
     --tmp_dir=$TMP_DIR \
     --problem=$PROBLEM \
@@ -48,8 +42,5 @@ else
     --hparams_set=$HPARAMS \
     --output_dir=$TRAIN_DIR \
     --train_steps=$TRAIN_STEPS \
-    --eval_steps=10 \
-    --dbgprofile=$DBG_PROFILE \
-    2> >(tee $LOG_FILE)
+	--dbgprofile=$DBG_PROFILE
 fi
-#
