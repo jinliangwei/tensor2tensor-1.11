@@ -85,6 +85,7 @@ def get_env_str(pargs, tf_config_str, num_gpus):
         'TF_CPP_MIN_LOG_LEVEL' :  pargs['log']['log_level'],
         'TF_CPP_MIN_VLOG_LEVEL' :  pargs['log']['vlog_level'],
     }
+    keys = ['LD_LIBRARY_PATH', 'PATH']
 
     if pargs['hdfs']['hadoop_classpath_file'] is not None:
         with open(pargs['hdfs']['hadoop_classpath_file'], 'r') as fobj:
@@ -97,6 +98,9 @@ def get_env_str(pargs, tf_config_str, num_gpus):
 
     if num_gpus == 0:
         env_vars['CUDA_VISIBLE_DEVICES'] = ""
+
+    for k in keys:
+        env_vars[k] = os.getenv(k)
 
     return ''.join([' %s=\'%s\'' % (k, v) for (k, v) in env_vars.items()])
 
