@@ -719,9 +719,7 @@ def mtf_transformer_base():
   hparams.learning_rate_schedule = "linear_warmup*rsqrt_decay*linear_decay"
   hparams.learning_rate_warmup_steps = 10000
   hparams.add_hparam("master_dtype", "float32")
-  #hparams.add_hparam("master_dtype", "bfloat16")
   hparams.add_hparam("slice_dtype", "float32")
-  #hparams.activation_dtype = "bfloat16"
   hparams.activation_dtype = "float32"
 
   # These parameters make Transformer model compatible with MtfTransformer

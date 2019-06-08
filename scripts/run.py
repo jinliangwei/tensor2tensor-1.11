@@ -208,7 +208,7 @@ def get_command_with_profile(args, pargs, env_vars_str, job_name, index):
     trainer_path = 'python -u ./tensor2tensor/bin/t2t-trainer'
 
     if args.profile is None:
-        cmd_app = 'cd ' + args.work_path + '; ' + env_vars_str + ' ' + trainer_path
+        cmd_app = 'cd ' + args.work_path + '; ' + env_vars_str + ' ; source env/bin/activate;' + trainer_path
     elif args.profile == 'strace':
         strace_arg_str = get_strace_arg_str(pargs['strace'], job_name, index)
         cmd_app = 'cd ' + args.work_path + '; ' + env_vars_str + ' strace ' + strace_arg_str + ' ' + trainer_path
