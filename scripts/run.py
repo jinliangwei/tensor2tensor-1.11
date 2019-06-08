@@ -208,7 +208,7 @@ def get_command_with_profile(args, pargs, env_vars_str, job_name, index):
     trainer_path = 'python -u ./tensor2tensor/bin/t2t-trainer'
 
     if args.profile is None:
-        cmd_app = 'cd ' + args.work_path + '; ' + env_vars_str + ' ; source env/bin/activate;' + trainer_path
+        cmd_app = 'cd ' + args.work_path + '; ' + env_vars_str + ' ' + trainer_path
     elif args.profile == 'strace':
         strace_arg_str = get_strace_arg_str(pargs['strace'], job_name, index)
         cmd_app = 'cd ' + args.work_path + '; ' + env_vars_str + ' strace ' + strace_arg_str + ' ' + trainer_path
@@ -246,8 +246,8 @@ if __name__ == '__main__':
         print(tf_config_str)
         env_vars_str = get_env_str(pargs, tf_config_str, int(pargs['worker']['num_gpus_per_worker']))
         worker_args_str = get_worker_args_str(pargs, worker_index, host)
-        cmd_worker = get_command_with_profile(args, pargs, env_vars_str, 'worker', worker_index) \
-                     + app_args_str + worker_args_str + (logging_str % (host, 'worker' + str(worker_index)))
+        cmd_worker = get_command_with_profile(args, pargs, env_vars_str, 'master', worker_index) \
+                     + app_args_str + worker_args_str + (logging_str % (host, 'master' + str(worker_index)))
         print(cmd_worker)
         print(worker_args_str)
         worker_proc = subprocess.Popen(['ssh', '-oStrictHostKeyChecking=no',
@@ -260,7 +260,7 @@ if __name__ == '__main__':
             wait_proc = worker_proc
 
     for ps_index in range(0, num_ps):
-        host = ps_hosts[ps_index ]
+        host = ps_hosts[ps_index]
         tf_config_dict["task"] = {"type" : "ps", "index" : ps_index}
         tf_config_str = json.dumps(tf_config_dict)
         print(tf_config_str)
