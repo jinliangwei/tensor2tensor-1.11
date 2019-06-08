@@ -158,6 +158,7 @@ class MtfTransformer(mtf_model.MtfModel):
     if len(targets.get_shape()) > 2:
       tf.logging.info("targets = %s" % targets)
       targets = tf.squeeze(targets, [2, 3])
+
     # pad targets to max_length
     def pad_to_max_length(x):
       extra_length = hparams.max_length - tf.shape(x)[1]
@@ -169,6 +170,9 @@ class MtfTransformer(mtf_model.MtfModel):
                 "inputs_segmentation", "inputs_position"]:
       if key in features:
         features[key] = pad_to_max_length(features[key])
+    #print_targets = tf.print("print_targets: ", targets, tf.shape(targets), features)
+
+    #with tf.control_dependencies([print_targets]):
     shifted_targets = common_layers.shift_right_2d(targets)
 
     targets = self._import_to_batch_by_length(targets, "targets", mesh, hparams)
@@ -210,6 +214,7 @@ class MtfTransformer(mtf_model.MtfModel):
       inputs = tf.squeeze(tf.to_int32(features["inputs"]), [2, 3], name = "squeeze_input")
       inputs = pad_to_max_length(inputs)
       inputs = self._import_to_batch_by_length(inputs, "inputs", mesh, hparams)
+      #print_inputs = tf.print("inputs = ", inputs)
       if "inputs_segmentation" in features:
         # "Packed" dataset - keep the examples from seeing each other.
         inputs_segmentation = self._import_to_batch_by_length(
@@ -227,6 +232,7 @@ class MtfTransformer(mtf_model.MtfModel):
             mtf.layers.attention_mask_ignore_padding(
                 inputs, dtype=self.activation_dtype))
 
+        #with tf.control_dependencies([print_inputs]):
       x = (mtf.gather(inputs_embedding_var, inputs, self.inputs_vocab_dim) +
            mtf.gather(positional_embedding_var, inputs_position,
                       self.max_length_dim))
@@ -319,6 +325,7 @@ class MtfTransformer(mtf_model.MtfModel):
     hparams = self._hparams
 
     if layer_type == "drd":
+      tf.logging.info("add drd layer")
       return mtf.layers.dense_relu_dense(
           x, self.feedforward_dim, dropout=hparams.relu_dropout,
           dropout_broadcast_dims=[self.length_dim],
@@ -327,6 +334,7 @@ class MtfTransformer(mtf_model.MtfModel):
     elif layer_type == "none":
       return x
     elif layer_type == "moe":
+      tf.logging.info("add moe layer")
       output, loss = moe.transformer_moe_layer_v1(
           x,
           self.model_dim,
@@ -338,6 +346,7 @@ class MtfTransformer(mtf_model.MtfModel):
         losses.append(loss)
       return output
     elif layer_type == "hmoe":
+      tf.logging.info("add hmoe layer")
       output, loss = moe.transformer_moe_layer_v2(
           x,
           self.model_dim,
@@ -709,9 +718,11 @@ def mtf_transformer_base():
   hparams.optimizer = "Adafactor"
   hparams.learning_rate_schedule = "linear_warmup*rsqrt_decay*linear_decay"
   hparams.learning_rate_warmup_steps = 10000
-  hparams.add_hparam("master_dtype", "bfloat16")
+  hparams.add_hparam("master_dtype", "float32")
+  #hparams.add_hparam("master_dtype", "bfloat16")
   hparams.add_hparam("slice_dtype", "float32")
-  hparams.activation_dtype = "bfloat16"
+  #hparams.activation_dtype = "bfloat16"
+  hparams.activation_dtype = "float32"
 
   # These parameters make Transformer model compatible with MtfTransformer
   # Do not override these, as mtf_transformer does not support other options.
@@ -744,9 +755,50 @@ def mtf_transformer_base_4():
   return hparams
 
 @registry.register_hparams
+def mtf_transformer_base_moe_4():
+  hparams = mtf_transformer_base()
+  hparams.encoder_layers = ["att", "moe"] * 6
+  hparams.decoder_layers = ["att", "enc_att", "moe"] * 6
+  hparams.layout += ";experts:model"
+  moe.set_default_moe_hparams(hparams)
+  hparams.moe_num_experts = 64
+  hparams.mesh_shape = "model:4"
+  return hparams
+
+@registry.register_hparams
 def mtf_transformer_base_1():
   hparams = mtf_transformer_base()
+  hparams.d_ff = 1024
+  hparams.d_model = 256
+  hparams.batch_size = 32
   hparams.mesh_shape = "batch:1"
+  return hparams
+
+@registry.register_hparams
+def mtf_transformer_base_moe_1():
+  hparams = mtf_transformer_base()
+  hparams.d_ff = 1024
+  hparams.d_model = 256
+  hparams.encoder_layers = ["att", "moe"] * 6
+  hparams.decoder_layers = ["att", "enc_att", "moe"] * 6
+  moe.set_default_moe_hparams(hparams)
+  hparams.moe_num_experts = 64
+  hparams.batch_size = 16
+  hparams.mesh_shape = "batch:1"
+  return hparams
+
+@registry.register_hparams
+def mtf_transformer_base_moe_4_small():
+  hparams = mtf_transformer_base()
+  hparams.d_ff = 1024
+  hparams.d_model = 256
+  hparams.encoder_layers = ["att", "moe"] * 6
+  hparams.decoder_layers = ["att", "enc_att", "moe"] * 6
+  moe.set_default_moe_hparams(hparams)
+  hparams.moe_num_experts = 256
+  hparams.batch_size = 16
+  hparams.layout += ";experts:model"
+  hparams.mesh_shape = "model:4"
   return hparams
 
 @registry.register_hparams
@@ -775,11 +827,12 @@ def mtf_transformer_tiny():
   hparams.d_model = 128
   hparams.d_ff = 512
   hparams.batch_size = 8
-  hparams.encoder_layers = ["att", "drd"] * 2
-  hparams.decoder_layers = ["att", "enc_att", "drd"] * 2
+  hparams.encoder_layers = ["att", "drd"] * 6
+  hparams.decoder_layers = ["att", "enc_att", "drd"] * 6
   hparams.num_heads = 8
   # data parallelism and model-parallelism
-  hparams.mesh_shape = "batch:2;model:4"
+  #hparams.mesh_shape = "batch:2;model:4"
+  hparams.mesh_shape = "batch:1"
   hparams.activation_dtype = "float32"
   return hparams
 

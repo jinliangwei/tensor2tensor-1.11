@@ -57,7 +57,8 @@ def get_default_config():
         'vlog_level' :  '-1',
     }
     config['memory'] = {
-        'mem_logger_dir' : None
+        'mem_logger_dir' : None,
+        'also_log_to_stderr' : 'false'
     }
     config['strace'] = {
         'output' : '/tmp/master.strace',
@@ -81,6 +82,7 @@ def get_default_config():
 def get_env_str(pargs, tf_config_str, num_gpus):
     env_vars = {
         'TF_CONFIG' : tf_config_str,
+        'TF_CPP_MIN_LOG_LEVEL' :  pargs['log']['log_level'],
         'TF_CPP_MIN_VLOG_LEVEL' :  pargs['log']['vlog_level'],
     }
 
@@ -90,6 +92,8 @@ def get_env_str(pargs, tf_config_str, num_gpus):
 
     if pargs['memory']['mem_logger_dir'] is not None:
         env_vars['TF_MEM_LOGGER_PATH_PREFIX'] = pargs['memory']['mem_logger_dir']
+        if pargs['memory']['also_log_to_stderr']:
+            env_vars['TF_MEM_LOGGER_ALSO_LOG_TO_STDERR'] = pargs['memory']['also_log_to_stderr']
 
     if num_gpus == 0:
         env_vars['CUDA_VISIBLE_DEVICES'] = ""
@@ -114,7 +118,7 @@ def get_tf_config_dict(args, pargs):
     num_ps = int(pargs['ps']['num_ps'])
     worker_hosts = hosts[0:num_workers]
     #ps_hosts = [host for host in hosts[num_workers:(num_ps + num_workers)]]
-    ps_hosts = hosts[0:num_ps]
+    ps_hosts = hosts[num_workers:(num_ps + num_workers)]
 
     worker_addrs = ["%s:%s" % (host, pargs['worker']['port']) for host in worker_hosts]
     ps_addrs = ["%s:%s" % (host, pargs['ps']['port']) for host in ps_hosts]

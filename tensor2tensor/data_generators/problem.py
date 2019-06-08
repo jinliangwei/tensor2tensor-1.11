@@ -832,12 +832,17 @@ class Problem(object):
     else:
       num_threads = cpu_count() if is_training else 1
 
+    if config:
+      if config.data_parallelism == None:
+        tf.logging.info("data_parallelism is none")
+
     if config and hasattr(config,
                           "data_parallelism") and config.data_parallelism:
+      tf.logging.info("data_parallelism.n = " + str(config.data_parallelism.n))
       num_shards = config.data_parallelism.n
     else:
       num_shards = 1
-
+    tf.logging.info("num_shards = " + str(num_shards))
     max_length = self.max_length(hparams)
     mlperf_log.transformer_print(
         key=mlperf_log.INPUT_MAX_LENGTH, value=max_length)

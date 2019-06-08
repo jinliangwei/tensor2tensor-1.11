@@ -217,6 +217,7 @@ def create_run_config(model_name,
                       cloud_tpu_name=""):
   """Create RunConfig, TPUConfig, and Parallelism object."""
   tf.logging.info("create_run_config, xla_jit_level = %d" % xla_jit_level)
+  tf.logging.info("use_tpu = " + str(use_tpu))
   session_config = create_session_config(
       log_device_placement=log_device_placement,
       enable_graph_rewriter=enable_graph_rewriter,
@@ -298,6 +299,7 @@ def create_run_config(model_name,
       distribution = tf.contrib.distribute.MirroredStrategy()
       config = config.replace(train_distribute=distribution)
       config.data_parallelism = None
+      tf.logging.info("set data_parallelism to None")
     else:
       tf.logging.info("Configuring DataParallelism to replicate the model.")
       config.data_parallelism = devices.data_parallelism(

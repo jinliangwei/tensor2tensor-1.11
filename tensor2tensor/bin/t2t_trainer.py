@@ -268,7 +268,6 @@ def create_run_config(hp, output_dir=None):
       tpu_config_extra_kwargs=tpu_config_extra_kwargs,
       cloud_tpu_name=FLAGS.cloud_tpu_name)
 
-
 def generate_data():
   # Generate data if requested.
   data_dir = os.path.expanduser(FLAGS.data_dir)

@@ -97,6 +97,15 @@ def xmoe_top_2():
   hparams.layout = "batch:all;experts:all"
   return hparams
 
+@registry.register_hparams
+def xmoe_top_2_4():
+  """Mixture of experts (16 experts)."""
+  hparams = xmoe_dense_4k()
+  moe.set_default_moe_hparams(hparams)
+  hparams.mesh_shape = "all:4"
+  hparams.layout = "batch:all;experts:all"
+  return hparams
+
 
 @registry.register_hparams
 def xmoe_top_2_c15():

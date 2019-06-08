@@ -515,9 +515,9 @@ def _top_2_gating(
   density_1 = mtf.reduce_mean(mask_1, reduced_dim=group_size_dim)
   # Something continuous that is correlated with what we want to equalize.
   density_1_proxy = mtf.reduce_mean(density_1_proxy, reduced_dim=group_size_dim)
-  density_1 = mtf.Print(
-      density_1, [mtf.reduce_mean(density_1, output_shape=[experts_dim])],
-      "density_1", summarize=1000)
+  #density_1 = mtf.Print(
+  #    density_1, [mtf.reduce_mean(density_1, output_shape=[experts_dim])],
+  #    "density_1", summarize=1000)
   loss = (mtf.reduce_mean(density_1_proxy * density_1)
           * float(experts_dim.size * experts_dim.size))
 
@@ -559,9 +559,9 @@ def _top_2_gating(
                  gate_2 / max(threshold, 1e-9)))
   else:
     raise ValueError("Unknown policy %s" % policy)
-  mask_2 = mtf.Print(
-      mask_2, [mtf.reduce_mean(mask_2, output_shape=[experts_dim])],
-      "density_2", summarize=1000)
+  #mask_2 = mtf.Print(
+  #    mask_2, [mtf.reduce_mean(mask_2, output_shape=[experts_dim])],
+  #    "density_2", summarize=1000)
 
   # COMPUTE ASSIGNMENT TO EXPERTS
   # [batch, group, experts]

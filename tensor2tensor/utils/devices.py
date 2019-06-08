@@ -76,6 +76,7 @@ def data_parallelism(daisy_chain_variables=True,
   tf.logging.info("schedule=%s" % schedule)
   tf.logging.info("worker_gpu=%s" % worker_gpu)
   tf.logging.info("sync=%s" % sync)
+  tf.logging.info("ps_replicas=%d" % ps_replicas)
   def _ps_replicas(all_workers=False):
     if all_workers:
       return list(range(ps_replicas))
@@ -132,6 +133,9 @@ def data_parallelism(daisy_chain_variables=True,
 
   is_single_machine = ps_replicas == 0 and worker_replicas == 1
 
+  tf.logging.info("no_data_parallelism: %s", str(no_data_parallelism))
+  tf.logging.info("is_single_machine: %s", str(is_single_machine))
+
   if no_data_parallelism:
     datashard_devices = [""]
     caching_devices = None
@@ -144,10 +148,12 @@ def data_parallelism(daisy_chain_variables=True,
       datashard_devices += ["cpu:0"]
     caching_devices = None
   elif sync and ps_replicas > 0:
+    tf.logging.info("sync and ps_replicas > 0")
     # compute on ps
     datashard_devices = [
         _replica_device_setter(d) for d in ps_devices(all_workers=all_workers)
     ]
+    tf.logging.info("datashard_devices: %s", datashard_devices)
     if ps_gpu > 0 and ps_replicas > 1:
       caching_devices = [
           ps_job + "/task:%d/cpu:0" % d
