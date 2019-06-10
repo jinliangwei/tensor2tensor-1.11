@@ -571,8 +571,8 @@ def _top_2_gating(
       mask_1, group_size_dim, exclusive=True) * mask_1
   # Remove the elements that don't fit. [batch, group, experts]
   mask_1_1 = mask_1 * mtf.to_float(mtf.less(position_in_expert_1, expert_capacity_f))
-  dropped = (mtf.reduce_sum(mask_1, output_shape=[experts_dim])
-    - mtf.reduce_sum(mask_1_1, output_shape=[experts_dim]))
+  dropped = (mtf.reduce_sum(mask_1, reduced_dim=group_size_dim)
+    - mtf.reduce_sum(mask_1_1, reduced_dim=group_size_dim))
 
   # [batch, experts]
   # How many examples in this sequence go to this expert
@@ -590,9 +590,13 @@ def _top_2_gating(
       mtf.cumsum(mask_2, group_size_dim, exclusive=True) + mask_1_count)
   position_in_expert_2 *= mask_2
   mask_2_1 = mask_2 * mtf.to_float(mtf.less(position_in_expert_2, expert_capacity_f))
-  dropped += (mtf.reduce_sum(mask_2, output_shape=[experts_dim])
-    - mtf.reduce_sum(mask_2_1, output_shape=[experts_dim]))
-  mask_2_1 = mtf.Print(mask_2_1, [dropped], "Dropped: ", summarize=int(experts_dim.size))
+  dropped += (mtf.reduce_sum(mask_2, reduced_dim=group_size_dim)
+    - mtf.reduce_sum(mask_2_1, reduced_dim=group_size_dim))
+  zeroed = (expert_capacity_f - mtf.reduce_sum(mask_2_1 + mask_1_1, reduced_dim=group_size_dim))
+  #mask_2_1 = mtf.Print(mask_2_1, [dropped], "Dropped: ", summarize=int(experts_dim.size))
+  #mask_2_1 = mtf.Print(mask_2_1, [zeroed], "Zeroed: ", summarize=int(experts_dim.size))
+  mask_2_1 = mtf.Print(mask_2_1, [mtf.reduce_sum(dropped, output_shape=[experts_dim])], "Dropped: ", summarize=int(experts_dim.size))
+  mask_2_1 = mtf.Print(mask_2_1, [mtf.reduce_sum(zeroed, output_shape=[experts_dim])], "Zeroed: ", summarize=int(experts_dim.size))
 
   # mask_2_count = mtf.reduce_sum(mask_2, reduced_dim=experts_dim)
   mask_2_flat = mtf.reduce_sum(mask_2_1, reduced_dim=experts_dim)
@@ -614,11 +618,6 @@ def _top_2_gating(
 
   dispatch_tensor = mtf.cast(
       mtf.cast(combine_tensor, tf.bool), combine_tensor.dtype)
-  batch_size = float(dispatch_tensor.shape[0].size)
-  zeroed = (expert_capacity_f * batch_size -
-    mtf.reduce_sum(dispatch_tensor, output_shape=[experts_dim]))
-  dispatch_tensor = mtf.Print(dispatch_tensor, [zeroed],
-    "Zeroed inputs: ", summarize=int(experts_dim.size))
 
   return dispatch_tensor, combine_tensor, loss, dropped, zeroed
 
