@@ -231,51 +231,28 @@ if __name__ == '__main__':
     pargs = parse_config_file(args.config_file, pargs)
     tf_config_dict, worker_hosts, ps_hosts = get_tf_config_dict(args, pargs)
     app_args_str = get_app_args_str(pargs['application'])
-    print(app_args_str)
     wait_proc = None
 
     num_workers = int(pargs['worker']['num_workers'])
     num_ps = int(pargs['ps']['num_ps'])
     logging_str = get_logging_str(pargs)
     for worker_index in range(0, num_workers):
-        print(worker_hosts[worker_index])
         host = worker_hosts[worker_index]
         tf_config_dict["task"] = {"type" : "master", "index" : worker_index}
-        print(tf_config_dict)
         tf_config_str = json.dumps(tf_config_dict)
-        print(tf_config_str)
         env_vars_str = get_env_str(pargs, tf_config_str, int(pargs['worker']['num_gpus_per_worker']))
         worker_args_str = get_worker_args_str(pargs, worker_index, host)
         cmd_worker = get_command_with_profile(args, pargs, env_vars_str, 'master', worker_index) \
                      + app_args_str + worker_args_str + (logging_str % (host, 'master' + str(worker_index)))
         print(cmd_worker)
-        print(worker_args_str)
-        worker_proc = subprocess.Popen(['ssh', '-oStrictHostKeyChecking=no',
-                                        '-oUserKnownHostsFile=/dev/null',
-                                        '-oLogLevel=QUIET',
-                                        '%s' % host,
-                                        cmd_worker],
-                                       shell=False)
-        if not wait_proc:
-            wait_proc = worker_proc
 
     for ps_index in range(0, num_ps):
         host = ps_hosts[ps_index]
         tf_config_dict["task"] = {"type" : "ps", "index" : ps_index}
         tf_config_str = json.dumps(tf_config_dict)
-        print(tf_config_str)
         env_vars_str = get_env_str(pargs, tf_config_str, int(pargs['ps']['num_gpus_per_ps']))
         ps_args_str = get_ps_args_str(pargs, ps_index, host)
         cmd_ps = get_command_with_profile(args, pargs, env_vars_str, 'ps', ps_index) \
                  + app_args_str + ps_args_str + (logging_str % (host, 'ps' + str(ps_index)))
         print(cmd_ps)
-        print(ps_args_str)
-        ps_proc = subprocess.Popen(['ssh', '-oStrictHostKeyChecking=no',
-                                    '-oUserKnownHostsFile=/dev/null',
-                                    '-oLogLevel=QUIET',
-                                    '%s' % host,
-                                    cmd_ps],
-                                   shell=False)
 
-    wait_proc.wait(
-)
