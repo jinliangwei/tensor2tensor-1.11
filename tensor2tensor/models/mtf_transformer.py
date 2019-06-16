@@ -786,10 +786,17 @@ def mtf_transformer_base_moe_1():
 @registry.register_hparams
 def mtf_transformer_base_moe_4_small():
   hparams = mtf_transformer_base_moe_1()
-  hparams.moe_num_experts = 256
+  hparams.moe_num_experts = 64
   hparams.batch_size = 64
   hparams.layout += ";experts:model"
   hparams.mesh_shape = "model:4"
+  return hparams
+
+@registry.register_hparams
+def mtf_transformer_base_moe_8_small():
+  hparams = mtf_transformer_base_moe_4_small()
+  hparams.moe_num_experts = 256
+  hparams.mesh_shape = "model:8"
   return hparams
 
 @registry.register_hparams
