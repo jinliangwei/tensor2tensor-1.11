@@ -105,6 +105,16 @@ def transformer_moe_layer_v1(inputs, output_dim, hparams, train,
       orig_inputs.shape[0].name,
       orig_inputs.shape.size // (group_size_dim.size * input_dim.size))
   inputs = mtf.reshape(inputs, [batch_dim, group_size_dim, input_dim])
+  print('orig_input.shape', orig_inputs.shape)
+  print('orig_inputs.shape.size', orig_inputs.shape.size)
+  print('group_size_dim.size', group_size_dim.size)
+  print('input_dim.size', input_dim.size)
+  print('input_dim', input_dim)
+  print('hidden_dim', hidden_dim)
+  print('experts_dim', experts_dim)
+  print('group_size_dim', group_size_dim)
+  print('batch_dim', batch_dim)
+  print('inputs.shape', inputs.shape)
 
   # Each sequence sends expert_capacity positions to each expert.
   capacity_factor = (
@@ -119,40 +129,51 @@ def transformer_moe_layer_v1(inputs, output_dim, hparams, train,
   batch_dim_unsplit = mtf.Dimension("batch_unsplit", batch_dim.size)
 
   if hparams.moe_gating == "top_2":
-    dispatch_tensor, combine_tensor, loss, dropped, zeroed = _top_2_gating(
-        inputs=inputs,
-        outer_expert_dims=None,
-        experts_dim=experts_dim_unsplit,
-        expert_capacity_dim=expert_capacity_dim,
-        hparams=hparams,
-        train=train)
+    with tf.variable_scope("top_2_gating"):
+        dispatch_tensor, combine_tensor, loss, dropped, nonzeroed = _top_2_gating(
+            inputs=inputs,
+            outer_expert_dims=None,
+            experts_dim=experts_dim_unsplit,
+            expert_capacity_dim=expert_capacity_dim,
+            hparams=hparams,
+            train=train)
   else:
     raise ValueError("unknown hparams.moe_gating=%s" % hparams.moe_gating)
 
-  with tf.variable_scope("MOEv1"):
+  with tf.variable_scope("experts"):
     # put num_experts dimension first to make split easier in alltoall
+    print('inputs.shape', inputs.shape)
+    print('dispatch_tensor.shape', dispatch_tensor.shape)
     expert_inputs = mtf.einsum([inputs, dispatch_tensor], mtf.Shape(
         [experts_dim_unsplit, batch_dim, expert_capacity_dim, input_dim]))
+    print('expert_inputs.shape', expert_inputs.shape)
 
     expert_inputs = mtf.reshape(expert_inputs, mtf.Shape(
         [experts_dim, batch_dim_unsplit, expert_capacity_dim, input_dim]))
+    print('expert_inputs.shape', expert_inputs.shape)
 
     # Now feed the expert inputs through the experts.
     h = mtf.layers.dense(
         expert_inputs, hidden_dim, expert_dims=[experts_dim],
         activation=mtf.relu, use_bias=False, master_dtype=master_dtype,
         slice_dtype=slice_dtype, name="x0")
+    print('h.shape', h.shape)
     expert_output = mtf.layers.dense(
         h, output_dim, expert_dims=[experts_dim], use_bias=False,
         master_dtype=master_dtype, slice_dtype=slice_dtype, name="x1")
+    print('expert_output.shape', expert_output.shape)
 
     expert_output = mtf.reshape(expert_output, mtf.Shape(
         [experts_dim_unsplit, batch_dim, expert_capacity_dim, input_dim]))
+    print('expert_output.shape', expert_output.shape)
 
+  print('combine_tensor.shape', combine_tensor.shape)
   output = mtf.einsum([expert_output, combine_tensor], mtf.Shape(
       [batch_dim, group_size_dim, output_dim]))
+  print('output.shape', output.shape)
 
   output = mtf.reshape(output, orig_inputs.shape.dims[:-1] + [output_dim])
+  print('output.shape', output.shape)
 
   return output, loss * hparams.moe_loss_coef
 
@@ -592,11 +613,11 @@ def _top_2_gating(
   mask_2_1 = mask_2 * mtf.to_float(mtf.less(position_in_expert_2, expert_capacity_f))
   dropped += (mtf.reduce_sum(mask_2, reduced_dim=group_size_dim)
     - mtf.reduce_sum(mask_2_1, reduced_dim=group_size_dim))
-  zeroed = (expert_capacity_f - mtf.reduce_sum(mask_2_1 + mask_1_1, reduced_dim=group_size_dim))
-  #mask_2_1 = mtf.Print(mask_2_1, [dropped], "Dropped: ", summarize=int(experts_dim.size))
-  #mask_2_1 = mtf.Print(mask_2_1, [zeroed], "Zeroed: ", summarize=int(experts_dim.size))
-  mask_2_1 = mtf.Print(mask_2_1, [mtf.reduce_sum(dropped, output_shape=[experts_dim])], "Dropped: ", summarize=int(experts_dim.size))
-  mask_2_1 = mtf.Print(mask_2_1, [mtf.reduce_sum(zeroed, output_shape=[experts_dim])], "Zeroed: ", summarize=int(experts_dim.size))
+  nonzeroed = mtf.reduce_sum(mask_2_1 + mask_1_1, reduced_dim=group_size_dim)
+  mask_2_1 = mtf.Print(mask_2_1, [dropped], "Dropped: ", summarize=int(experts_dim.size*inputs.shape.dims[0].size))
+  mask_2_1 = mtf.Print(mask_2_1, [nonzeroed], "Non-zeroed: ", summarize=int(experts_dim.size*inputs.shape.dims[0].size))
+  #mask_2_1 = mtf.Print(mask_2_1, [mtf.reduce_sum(dropped, output_shape=[experts_dim])], "Dropped: ", summarize=int(experts_dim.size))
+  #mask_2_1 = mtf.Print(mask_2_1, [mtf.reduce_sum(zeroed, output_shape=[experts_dim])], "Zeroed: ", summarize=int(experts_dim.size))
 
   # mask_2_count = mtf.reduce_sum(mask_2, reduced_dim=experts_dim)
   mask_2_flat = mtf.reduce_sum(mask_2_1, reduced_dim=experts_dim)
@@ -619,7 +640,7 @@ def _top_2_gating(
   dispatch_tensor = mtf.cast(
       mtf.cast(combine_tensor, tf.bool), combine_tensor.dtype)
 
-  return dispatch_tensor, combine_tensor, loss, dropped, zeroed
+  return dispatch_tensor, combine_tensor, loss, dropped, nonzeroed
 
 
 def set_default_moe_hparams(hparams):

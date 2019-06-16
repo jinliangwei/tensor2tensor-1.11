@@ -335,13 +335,14 @@ class MtfTransformer(mtf_model.MtfModel):
       return x
     elif layer_type == "moe":
       tf.logging.info("add moe layer")
-      output, loss = moe.transformer_moe_layer_v1(
-          x,
-          self.model_dim,
-          hparams,
-          hparams.mode == tf.estimator.ModeKeys.TRAIN,
-          master_dtype=self.master_dtype,
-          slice_dtype=self.slice_dtype)
+      with tf.variable_scope("MOEv1"):
+        output, loss = moe.transformer_moe_layer_v1(
+            x,
+            self.model_dim,
+            hparams,
+            hparams.mode == tf.estimator.ModeKeys.TRAIN,
+            master_dtype=self.master_dtype,
+            slice_dtype=self.slice_dtype)
       if losses is not None:
         losses.append(loss)
       return output
