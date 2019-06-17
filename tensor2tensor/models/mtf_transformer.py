@@ -754,17 +754,6 @@ def mtf_transformer_base_4():
   return hparams
 
 @registry.register_hparams
-def mtf_transformer_base_moe_4():
-  hparams = mtf_transformer_base()
-  hparams.encoder_layers = ["att", "moe"] * 6
-  hparams.decoder_layers = ["att", "enc_att", "moe"] * 6
-  hparams.layout += ";experts:model"
-  moe.set_default_moe_hparams(hparams)
-  hparams.moe_num_experts = 64
-  hparams.mesh_shape = "model:4"
-  return hparams
-
-@registry.register_hparams
 def mtf_transformer_base_1():
   hparams = mtf_transformer_base()
   hparams.d_ff = 1024
