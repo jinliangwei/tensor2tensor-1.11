@@ -774,17 +774,36 @@ def mtf_transformer_base_1():
   return hparams
 
 @registry.register_hparams
+def mtf_transformer_base_moe_1_small():
+  hparams = mtf_transformer_base_1()
+  hparams.encoder_layers = ["att", "moe"] * 1
+  hparams.decoder_layers = ["att", "enc_att", "moe"] * 1
+  moe.set_default_moe_hparams(hparams)
+  hparams.moe_num_experts = 4
+  hparams.batch_size = 16
+  return hparams
+
+@registry.register_hparams
 def mtf_transformer_base_moe_1():
   hparams = mtf_transformer_base_1()
   hparams.encoder_layers = ["att", "moe"] * 6
   hparams.decoder_layers = ["att", "enc_att", "moe"] * 6
   moe.set_default_moe_hparams(hparams)
-  hparams.moe_num_experts = 64
+  hparams.moe_num_experts = 4
   hparams.batch_size = 16
   return hparams
 
 @registry.register_hparams
 def mtf_transformer_base_moe_4_small():
+  hparams = mtf_transformer_base_moe_1_small()
+  hparams.moe_num_experts = 64
+  hparams.batch_size = 64
+  hparams.layout += ";experts:model"
+  hparams.mesh_shape = "model:4"
+  return hparams
+
+@registry.register_hparams
+def mtf_transformer_base_moe_4():
   hparams = mtf_transformer_base_moe_1()
   hparams.moe_num_experts = 64
   hparams.batch_size = 64
@@ -797,6 +816,25 @@ def mtf_transformer_base_moe_8_small():
   hparams = mtf_transformer_base_moe_4_small()
   hparams.moe_num_experts = 256
   hparams.mesh_shape = "model:8"
+  return hparams
+
+@registry.register_hparams
+def mtf_transformer_base_moe_8():
+  hparams = mtf_transformer_base_moe_4()
+  hparams.moe_num_experts = 256
+  hparams.mesh_shape = "model:8"
+  return hparams
+
+@registry.register_hparams
+def mtf_transformer_base_moe_16_small():
+  hparams = mtf_transformer_base_moe_8_small()
+  hparams.mesh_shape = "model:16"
+  return hparams
+
+@registry.register_hparams
+def mtf_transformer_base_moe_16():
+  hparams = mtf_transformer_base_moe_8()
+  hparams.mesh_shape = "model:16"
   return hparams
 
 @registry.register_hparams
