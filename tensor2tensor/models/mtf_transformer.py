@@ -775,8 +775,8 @@ def mtf_transformer_base_moe_1_small():
 @registry.register_hparams
 def mtf_transformer_base_moe_1():
   hparams = mtf_transformer_base_1()
-  hparams.encoder_layers = ["att", "moe"] * 6
-  hparams.decoder_layers = ["att", "enc_att", "moe"] * 6
+  hparams.encoder_layers = ["att", "moe"] * 3
+  hparams.decoder_layers = ["att", "enc_att", "moe"] * 3
   moe.set_default_moe_hparams(hparams)
   hparams.moe_num_experts = 4
   hparams.batch_size = 16
